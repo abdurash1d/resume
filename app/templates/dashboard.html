@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="lg:text-center">
+            <h2 class="text-base text-blue-600 font-semibold tracking-wide uppercase">Dashboard</h2>
+            <p class="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+                Welcome, {{ user.email }}
+            </p>
+            <p class="mt-4 max-w-2xl text-xl text-gray-500 lg:mx-auto">
+                Manage your resumes and create new ones with ease.
+            </p>
+        </div>
+
+        <div class="mt-10">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-medium text-gray-900">Your Resumes</h3>
+                <a href="/resumes/new" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i class="fas fa-plus mr-2"></i> New Resume
+                </a>
+            </div>
+
+            <div id="resumes-list" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <!-- Resumes will be loaded here via HTMX -->
+                <div class="text-center py-8" hx-get="/api/resumes" hx-trigger="load" hx-swap="innerHTML">
+                    <div class="animate-pulse">
+                        <div class="h-4 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
+                        <div class="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Store the token in localStorage if it's in the URL (for demo purposes)
+const urlParams = new URLSearchParams(window.location.search);
+const token = urlParams.get('token');
+if (token) {
+    localStorage.setItem('access_token', token);
+}
+
+// Add token to all HTMX requests
+document.body.addEventListener('htmx:configRequest', function(evt) {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+        evt.detail.headers['Authorization'] = `Bearer ${token}`;
+    }
+});
+
+// Handle 401 Unauthorized responses
+document.body.addEventListener('htmx:responseError', function(evt) {
+    if (evt.detail.xhr.status === 401) {
+        localStorage.removeItem('access_token');
+        window.location.href = '/login';
+    }
+});
+</script>
+{% endblock %}

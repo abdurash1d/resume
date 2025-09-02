@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="py-6 max-w-4xl mx-auto px-4">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Resume Details</h1>
+        <div class="space-x-2">
+            <button onclick="showHistory()" 
+                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                View History
+            </button>
+            <a href="/resumes" 
+               class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Back to List
+            </a>
+        </div>
+    </div>
+
+    <div id="resume-detail" 
+         hx-get="/api/resumes/{{ resume_id }}" 
+         hx-trigger="load, reloadDetail from:body"
+         hx-swap="innerHTML">
+        <!-- Content will be loaded here via HTMX -->
+        <div class="animate-pulse bg-white shadow overflow-hidden sm:rounded-lg p-6">
+            <div class="h-8 bg-gray-200 rounded w-1/2 mb-4"></div>
+            <div class="space-y-2">
+                <div class="h-4 bg-gray-200 rounded"></div>
+                <div class="h-4 bg-gray-200 rounded w-5/6"></div>
+                <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Improvement History Modal -->
+<div id="history-modal" class="hidden fixed z-10 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full sm:p-6">
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Improvement History</h3>
+                    <button type="button" onclick="document.getElementById('history-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-500">
+                        <span class="sr-only">Close</span>
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="history-content" class="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+                    <!-- History will be loaded here -->
+                    <div class="text-center py-8">
+                        <div class="animate-pulse">
+                            <div class="h-4 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Function to show improvement history
+function showHistory() {
+    const historyContent = document.getElementById('history-content');
+    const resumeId = window.location.pathname.split('/').pop();
+    
+    // Show loading state
+    historyContent.innerHTML = `
+        <div class="text-center py-8">
+            <div class="animate-pulse">
+                <div class="h-4 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
+            </div>
+        </div>`;
+    
+    // Show the modal
+    document.getElementById('history-modal').classList.remove('hidden');
+    
+    // Load history data
+    fetch(`/api/resumes/${resumeId}/history`)
+        .then(response => response.json())
+        .then(history => {
+            if (history.length === 0) {
+                historyContent.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        No improvement history found for this resume.
+                    </div>`;
+                return;
+            }
+            
+            // Format history entries
+            historyContent.innerHTML = history.map(entry => `
+                <div class="border-l-4 border-blue-500 pl-4 py-2 mb-6">
+                    <div class="flex justify-between items-baseline mb-2">
+                        <span class="text-sm font-medium text-gray-900">
+                            ${new Date(entry.created_at).toLocaleString()}
+                        </span>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-md mb-3">
+                        <h4 class="text-sm font-medium text-gray-900 mb-1">Original Content:</h4>
+                        <p class="text-sm text-gray-600 whitespace-pre-line">${entry.content || 'No content'}</p>
+                    </div>
+                    ${entry.improved_content ? `
+                    <div class="bg-green-50 p-4 rounded-md">
+                        <h4 class="text-sm font-medium text-gray-900 mb-1">Improved Version:</h4>
+                        <p class="text-sm text-gray-600 whitespace-pre-line">${entry.improved_content}</p>
+                    </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        })
+        .catch(error => {
+            console.error('Error loading history:', error);
+            historyContent.innerHTML = `
+                <div class="text-center py-8 text-red-500">
+                    Error loading history. Please try again.
+                </div>`;
+        });
+    
+    const token = localStorage.getItem('access_token');
+    
+    fetch(`/api/resumes/{{ resume_id }}/history`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (response.status === 401) {
+            localStorage.removeItem('access_token');
+            window.location.href = '/login';
+            return [];
+        }
+        return response.json();
+    })
+    .then(history => {
+        if (history.length === 0) {
+            historyContent.innerHTML = '<p class="text-sm text-gray-500">No history available.</p>';
+            return;
+        }
+        
+        let html = '';
+        history.forEach((item, index) => {
+            const date = new Date(item.created_at);
+            const dateStr = date.toLocaleString();
+            
+            html += `
+            <div class="border-l-4 border-blue-500 pl-4 py-2">
+                <div class="text-sm text-gray-500 mb-1">${dateStr}</div>
+                <div class="bg-gray-50 p-3 rounded mb-2">
+                    <div class="text-sm text-gray-700 whitespace-pre-wrap">${item.content}</div>
+                </div>
+                ${item.improved_content ? `
+                <div class="ml-4 border-l-4 border-green-500 pl-4 py-2">
+                    <div class="text-sm text-green-600 mb-1">Improved version:</div>
+                    <div class="bg-green-50 p-3 rounded">
+                        <div class="text-sm text-gray-700 whitespace-pre-wrap">${item.improved_content}</div>
+                    </div>
+                </div>` : ''}
+            </div>`;
+        });
+        
+        historyContent.innerHTML = html;
+    });
+    
+    document.getElementById('history-modal').classList.remove('hidden');
+}
+
+// Function to improve resume
+function improveResume() {
+    const content = document.querySelector('#resume-content').textContent;
+    const token = localStorage.getItem('access_token');
+    
+    fetch(`/api/resumes/{{ resume_id }}/improve`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ content: content })
+    })
+    .then(response => {
+        if (response.status === 401) {
+            localStorage.removeItem('access_token');
+            window.location.href = '/login';
+            return null;
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data) {
+            // Trigger a reload of the resume detail
+            htmx.trigger('#resume-detail', 'reloadDetail');
+        }
+    });
+}
+
+// Add token to all HTMX requests
+document.body.addEventListener('htmx:configRequest', function(evt) {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+        evt.detail.headers['Authorization'] = `Bearer ${token}`;
+    }
+});
+
+// Handle 401 Unauthorized responses
+document.body.addEventListener('htmx:responseError', function(evt) {
+    if (evt.detail.xhr.status === 401) {
+        localStorage.removeItem('access_token');
+        window.location.href = '/login';
+    }
+});
+</script>
+{% endblock %}
