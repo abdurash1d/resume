@@ -10,8 +10,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     
     # Database settings
-    DATABASE_URL: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/resume_db"
-    TEST_DATABASE_URL: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/test_resume_db"
+    DATABASE_URL: str = "postgresql+psycopg2://abdurashid:5161@localhost:5432/resume_db"
+    TEST_DATABASE_URL: str = "postgresql+psycopg2://abdurashid:5161@localhost:5432/test_resume_db"
     
     # Security
     ALGORITHM: str = "HS256"

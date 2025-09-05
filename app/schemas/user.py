@@ -13,8 +13,10 @@ class UserLogin(UserBase):
 
 class UserInDB(UserBase):
     id: int
-    is_active: bool
+    is_active: bool = True
     created_at: datetime
+    updated_at: datetime | None = None
+    hashed_password: str
 
     class Config:
         orm_mode = True

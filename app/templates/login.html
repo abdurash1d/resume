@@ -8,7 +8,12 @@
                 Sign in to your account
             </h2>
         </div>
-        <form id="loginForm" class="mt-8 space-y-6" hx-post="/auth/login" hx-target="#error-message" hx-swap="innerHTML">
+        <form id="loginForm" class="mt-8 space-y-6" method="POST" action="/auth/login">
+            {% if error %}
+            <div class="text-red-500 text-sm p-2 mb-4 border border-red-300 bg-red-50 rounded">
+                {{ error }}
+            </div>
+            {% endif %}
             <div id="error-message" class="text-red-500 text-sm"></div>
             <div class="rounded-md shadow-sm -space-y-px">
                 <div>
@@ -52,11 +57,54 @@
 </div>
 
 <script>
-document.getElementById('loginForm').addEventListener('htmx:afterRequest', function(evt) {
-    if (evt.detail.successful) {
-        const data = JSON.parse(evt.detail.xhr.responseText);
-        localStorage.setItem('access_token', data.access_token);
-        window.location.href = '/dashboard';
+// Handle login form submission
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const form = e.target;
+    const formData = new FormData(form);
+    const errorElement = document.getElementById('error-message');
+    errorElement.textContent = ''; // Clear previous errors
+    
+    try {
+        const response = await fetch('/auth/login', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                username: formData.get('username'),
+                password: formData.get('password'),
+                grant_type: 'password',
+                scope: ''
+            })
+        });
+        
+        const data = await response.json().catch(() => ({}));
+        
+        console.log('Login response:', response, data);
+        
+        if (response.ok && data.access_token) {
+            // Save the token and user data
+            localStorage.setItem('access_token', data.access_token);
+            if (data.user) {
+                localStorage.setItem('user', JSON.stringify(data.user));
+            }
+            
+            console.log('Authentication successful, redirecting to /dashboard');
+            // Redirect to dashboard with a full page reload
+            window.location.href = '/dashboard';
+            return;
+        } else {
+            // Show error message to user
+            const errorMsg = data.detail || 'Login failed. Please check your credentials.';
+            console.error('Login error:', errorMsg);
+            errorElement.textContent = errorMsg;
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        errorElement.textContent = 'An error occurred. Please try again later.';
     }
 });
 </script>

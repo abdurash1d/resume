@@ -8,7 +8,12 @@
                 Create a new account
             </h2>
         </div>
-        <form id="registerForm" class="mt-8 space-y-6" hx-post="/auth/register" hx-target="#error-message" hx-swap="innerHTML">
+        <form id="registerForm" class="mt-8 space-y-6" method="POST" action="/auth/register">
+            {% if error %}
+            <div class="text-red-500 text-sm p-2 mb-4 border border-red-300 bg-red-50 rounded">
+                {{ error }}
+            </div>
+            {% endif %}
             <div id="error-message" class="text-red-500 text-sm"></div>
             <div class="rounded-md shadow-sm -space-y-px">
                 <div>
@@ -44,10 +49,37 @@
 </div>
 
 <script>
-document.getElementById('registerForm').addEventListener('htmx:afterRequest', function(evt) {
-    if (evt.detail.successful) {
-        // Redirect to login page after successful registration
-        window.location.href = '/login?registered=true';
+// Handle form submission
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const form = e.target;
+    const formData = new FormData(form);
+    const errorElement = document.getElementById('error-message');
+    errorElement.textContent = ''; // Clear previous errors
+    
+    try {
+        const response = await fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams(formData).toString()
+        });
+        
+        const data = await response.json().catch(() => ({}));
+        
+        if (response.ok) {
+            // Redirect to login page on successful registration
+            window.location.href = '/login?registered=true';
+        } else {
+            // Show error message to user
+            errorElement.textContent = data.detail || 'Registration failed. Please check your input and try again.';
+        }
+    } catch (error) {
+        console.error('Registration error:', error);
+        errorElement.textContent = 'An error occurred. Please try again later.';
     }
 });
 </script>

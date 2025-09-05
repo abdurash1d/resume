@@ -4,6 +4,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, HTTPBearer, HTTPAuthorizationCredentials
+from starlette.authentication import AuthCredentials, AuthenticationBackend, AuthenticationError, SimpleUser
 from sqlalchemy.orm import Session
 import os
 from dotenv import load_dotenv
@@ -45,18 +46,40 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
+        # Log the token for debugging (remove in production)
+        print(f"Token received: {token}")
+        
+        # Decode the token
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        print(f"Decoded payload: {payload}")
+        
         email: str = payload.get("sub")
         if email is None:
+            print("No email in token")
             raise credentials_exception
+            
         token_data = TokenData(email=email)
-    except JWTError:
+        print(f"Token data: {token_data}")
+        
+        # Query the database for the user
+        user = db.query(User).filter(User.email == token_data.email).first()
+        print(f"User from DB: {user}")
+        
+        if user is None:
+            print(f"No user found with email: {token_data.email}")
+            raise credentials_exception
+            
+        return user
+        
+    except JWTError as e:
+        print(f"JWT Error: {str(e)}")
         raise credentials_exception
-    
-    user = db.query(User).filter(User.email == token_data.email).first()
-    if user is None:
-        raise credentials_exception
-    return user
+    except Exception as e:
+        print(f"Unexpected error in get_current_user: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while authenticating the user"
+        )
 
 async def get_current_user_from_token(
     request: Request,
@@ -92,3 +115,30 @@ async def get_current_active_user(current_user: User = Depends(get_current_user)
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
+
+
+class JWTAuthBackend(AuthenticationBackend):
+    async def authenticate(self, request):
+        auth = request.headers.get("Authorization")
+        if not auth:
+            return None
+
+        try:
+            scheme, token = auth.split()
+            if scheme.lower() != 'bearer':
+                return None
+                
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            email = payload.get("sub")
+            if email is None:
+                return None
+                
+            db = next(get_db())
+            user = db.query(User).filter(User.email == email).first()
+            if user is None:
+                return None
+                
+            return AuthCredentials(["authenticated"]), user
+            
+        except (JWTError, ValueError):
+            return None
