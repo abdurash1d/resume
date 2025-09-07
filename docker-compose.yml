@@ -30,7 +30,7 @@ services:
       - .:/app
       - ./alembic.ini:/app/alembic.ini
     ports:
-      - "8000:8000"
+      - "8001:8001"
     environment:
       - PYTHONPATH=/app
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/resume_db
