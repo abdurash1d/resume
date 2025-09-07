@@ -6,19 +6,20 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     PROJECT_NAME: str = "Resume Manager"
     API_V1_STR: str = "/api"
-    SECRET_KEY: str = "your-secret-key-here"  # Change this in production
+    SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
-    
+
     # Database settings
-    DATABASE_URL: str = "postgresql+psycopg2://abdurashid:5161@localhost:5432/resume_db"
-    TEST_DATABASE_URL: str = "postgresql+psycopg2://abdurashid:5161@localhost:5432/test_resume_db"
-    
+    DATABASE_URL: str
+    TEST_DATABASE_URL: Optional[str] = None
+
     # Security
     ALGORITHM: str = "HS256"
-    
+
     class Config:
         case_sensitive = True
-        env_file = ".env"
+        # By not specifying env_file, pydantic-settings will prioritize
+        # environment variables, which Docker Compose provides from .env.prod.
 
 # Create an instance of settings
 settings = Settings()
