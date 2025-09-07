@@ -69,22 +69,24 @@ def delete_resume(db: Session, resume_id: int, user_id: int) -> None:
 def improve_resume(
     db: Session, 
     resume_id: int, 
-    improvement: ResumeImprove, 
     user_id: int
 ) -> Resume:
     db_resume = get_resume(db, resume_id, user_id)
     
+    original_content = db_resume.content
+    improved_content = f"{original_content} [Improved]"
+    
     # Save current version to history
     history_entry = ResumeHistory(
         resume_id=resume_id,
-        content=db_resume.content,
-        improved_content=improvement.improved_content,
+        content=original_content,
+        improved_content=improved_content,
         created_at=datetime.utcnow()
     )
     db.add(history_entry)
     
     # Update resume with improved content
-    db_resume.content = improvement.improved_content
+    db_resume.content = improved_content
     db.commit()
     db.refresh(db_resume)
     

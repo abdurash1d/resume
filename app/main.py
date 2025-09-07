@@ -44,8 +44,11 @@ app.add_middleware(
 
 # Include API routers
 from .api import auth, resume
+from .views import resume_views
+
 app.include_router(auth.router)
 app.include_router(resume.router, prefix="/api")
+app.include_router(resume_views.router)
 
 # Mount static files
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
@@ -109,16 +112,23 @@ async def dashboard_page(
 ):
     # If we get here, the user is authenticated
     try:
+        # Get the user's resumes
+        db = next(get_db())
+        resumes = db.query(models.Resume).filter(
+            models.Resume.user_id == current_user.id
+        ).order_by(models.Resume.updated_at.desc()).all()
+        
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
-            "user": current_user
+            "user": current_user,
+            "resumes": resumes
         })
     except Exception as e:
         logger.error(f"Error in dashboard route: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while loading the dashboard"
-        )
+        # If there's an error, redirect to login
+        response = RedirectResponse(url="/login")
+        response.delete_cookie("access_token")
+        return response
 
 @app.exception_handler(HTTPException)
 async def custom_http_exception_handler(request: Request, exc: HTTPException):
@@ -128,87 +138,6 @@ async def custom_http_exception_handler(request: Request, exc: HTTPException):
         status_code=exc.status_code,
         content={"detail": exc.detail},
     )
-
-@app.get("/resumes", response_class=HTMLResponse)
-async def resumes_page(
-    request: Request,
-    current_user: models.User = Depends(get_current_active_user)
-):
-    return templates.TemplateResponse("resumes.html", {
-        "request": request,
-        "user": current_user
-    })
-
-@app.get("/resumes/new", response_class=HTMLResponse)
-async def new_resume_page(
-    request: Request,
-    current_user: models.User = Depends(get_current_active_user)
-):
-    return templates.TemplateResponse("resume_form.html", {
-        "request": request,
-        "user": current_user
-    })
-
-@app.get("/resumes/{resume_id}", response_class=HTMLResponse)
-async def resume_detail_page(
-    request: Request,
-    resume_id: int,
-    current_user: models.User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
-):
-    resume = crud.resume.get_resume(db, resume_id=resume_id, user_id=current_user.id)
-    if not resume:
-        raise HTTPException(status_code=404, detail="Resume not found")
-    
-    return templates.TemplateResponse("resume_detail.html", {
-        "request": request,
-        "user": current_user,
-        "resume": resume,
-        "resume_id": resume_id
-    })
-
-@app.get("/resumes/{resume_id}/edit", response_class=HTMLResponse)
-async def edit_resume_page(
-    request: Request,
-    resume_id: int,
-    current_user: models.User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
-):
-    resume = crud.resume.get_resume(db, resume_id=resume_id, user_id=current_user.id)
-    if not resume:
-        raise HTTPException(status_code=404, detail="Resume not found")
-    
-    return templates.TemplateResponse("resume_form.html", {
-        "request": request,
-        "user": current_user,
-        "resume": resume
-    })
-
-# API endpoints for frontend
-@app.get("/api/resumes", response_model=List[schemas.resume.ResumeInDB])
-async def get_user_resumes(
-    skip: int = 0,
-    limit: int = 100,
-    current_user: models.User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
-):
-    """Get all resumes for the current user"""
-    return crud.resume.get_resumes(db, user_id=current_user.id, skip=skip, limit=limit)
-
-@app.get("/api/resumes/{resume_id}/history")
-async def get_resume_history(
-    resume_id: int,
-    current_user: models.User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
-):
-    """Get improvement history for a resume"""
-    # Verify the resume belongs to the user
-    resume = crud.resume.get_resume(db, resume_id=resume_id, user_id=current_user.id)
-    if not resume:
-        raise HTTPException(status_code=404, detail="Resume not found")
-    
-    history = crud.resume.get_resume_history(db, resume_id=resume_id, user_id=current_user.id)
-    return jsonable_encoder(history)
 
 # Error handlers
 @app.exception_handler(404)

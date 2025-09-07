@@ -68,44 +68,6 @@ def update_resume(
         user_id=current_user.id
     )
 
-@router.post("/{resume_id}/improve", response_model=schemas.resume.ResumeInDB)
-async def improve_resume(
-    resume_id: int,
-    improvement: schemas.resume.ResumeImprove,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user)
-):
-    """
-    Improve a resume using AI and save the improvement history.
-    """
-    # Get the current resume
-    resume = crud.resume.get_resume(db, resume_id=resume_id, user_id=current_user.id)
-    if not resume:
-        raise HTTPException(status_code=404, detail="Resume not found")
-    
-    # Save current version to history before making changes
-    history_entry = crud_history.create_resume_history(
-        db=db,
-        history=schemas_history.ResumeHistoryCreate(
-            resume_id=resume_id,
-            content=resume.content,
-            improved_content=improvement.improved_content,
-            created_at=datetime.utcnow()
-        )
-    )
-    
-    # Update the resume with improved content
-    updated_resume = crud.resume.update_resume(
-        db=db,
-        resume_id=resume_id,
-        resume_update=schemas.resume.ResumeUpdate(
-            title=resume.title,
-            content=improvement.improved_content
-        ),
-        user_id=current_user.id
-    )
-    
-    return updated_resume
 
 @router.get("/{resume_id}/history", response_model=List[schemas_history.ResumeHistory])
 async def get_resume_history(
@@ -137,14 +99,9 @@ def delete_resume(
     crud.resume.delete_resume(db=db, resume_id=resume_id, user_id=current_user.id)
     return {"ok": True}
 
-@router.post(
-    "/{resume_id}/improve", 
-    response_model=schemas.resume.ResumeHistory,
-    status_code=status.HTTP_201_CREATED
-)
+@router.post("/{resume_id}/improve", response_model=schemas.resume.ResumeInDB)
 def improve_resume(
     resume_id: int,
-    improvement: schemas.resume.ResumeImprove,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
@@ -154,6 +111,5 @@ def improve_resume(
     return crud.resume.improve_resume(
         db=db,
         resume_id=resume_id,
-        improvement=improvement,
         user_id=current_user.id
     )

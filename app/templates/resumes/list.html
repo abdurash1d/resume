@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+        <div>
+            <h3 class="text-lg leading-6 font-medium text-gray-900">My Resumes</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Manage your resumes and create new ones</p>
+        </div>
+        <a href="/resumes/new" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <i class="fas fa-plus mr-2"></i> New Resume
+        </a>
+    </div>
+    
+    <div class="border-t border-gray-200">
+        <ul class="divide-y divide-gray-200">
+            {% for resume in resumes %}
+            <li class="hover:bg-gray-50">
+                <a href="/resumes/{{ resume.id }}" class="block hover:bg-gray-50">
+                    <div class="px-4 py-4 sm:px-6">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm font-medium text-blue-600 truncate">{{ resume.title }}</p>
+                            <div class="ml-2 flex-shrink-0 flex">
+                                <p class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    {{ resume.created_at.strftime('%Y-%m-%d') }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-2 sm:flex sm:justify-between">
+                            <div class="sm:flex">
+                                <p class="flex items-center text-sm text-gray-500">
+                                    <i class="fas fa-file-alt mr-1.5 h-5 w-5 text-gray-400"></i>
+                                    {{ resume.content[:100] }}{% if resume.content|length > 100 %}...{% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </li>
+            {% else %}
+            <li class="px-4 py-4 sm:px-6 text-center text-gray-500">
+                No resumes found. <a href="/resumes/new" class="text-blue-600 hover:text-blue-800">Create your first resume</a>.
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+{% if resumes %}
+<div class="mt-4 flex justify-between items-center">
+    <div class="text-sm text-gray-500">
+        Showing <span class="font-medium">{{ resumes|length }}</span> resume{{ 's' if resumes|length != 1 else '' }}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

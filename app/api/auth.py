@@ -108,8 +108,7 @@ async def login(
             expires_delta=access_token_expires
         )
         
-        # Return user data along with the token
-        return {
+        response = JSONResponse(content={
             "access_token": access_token, 
             "token_type": "bearer",
             "user": {
@@ -117,7 +116,15 @@ async def login(
                 "is_active": user.is_active,
                 "id": user.id
             }
-        }
+        })
+        response.set_cookie(
+            key="access_token",
+            value=f"Bearer {access_token}",
+            httponly=True,
+            max_age=1800,  # 30 minutes
+            expires=1800,
+        )
+        return response
         
     except Exception as e:
         print(f"Login error: {str(e)}")
@@ -125,3 +132,9 @@ async def login(
             status_code=500,
             content={"detail": "An error occurred during login"}
         )
+
+@router.post("/logout")
+async def logout(request: Request):
+    response = JSONResponse(content={"message": "Logout successful"})
+    response.delete_cookie("access_token")
+    return response

@@ -64,6 +64,12 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     const form = e.target;
     const formData = new FormData(form);
     const errorElement = document.getElementById('error-message');
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalButtonText = submitButton.innerHTML;
+    
+    // Disable button and show loading state
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Signing in...';
     errorElement.textContent = ''; // Clear previous errors
     
     try {
@@ -82,18 +88,10 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         });
         
         const data = await response.json().catch(() => ({}));
-        
         console.log('Login response:', response, data);
         
         if (response.ok && data.access_token) {
-            // Save the token and user data
-            localStorage.setItem('access_token', data.access_token);
-            if (data.user) {
-                localStorage.setItem('user', JSON.stringify(data.user));
-            }
-            
-            console.log('Authentication successful, redirecting to /dashboard');
-            // Redirect to dashboard with a full page reload
+            // The server now sets an HTTP-only cookie, so we just need to redirect.
             window.location.href = '/dashboard';
             return;
         } else {
@@ -101,11 +99,20 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             const errorMsg = data.detail || 'Login failed. Please check your credentials.';
             console.error('Login error:', errorMsg);
             errorElement.textContent = errorMsg;
+            
+            // Re-enable the submit button
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalButtonText;
         }
     } catch (error) {
         console.error('Login error:', error);
         errorElement.textContent = 'An error occurred. Please try again later.';
+        
+        // Re-enable the submit button
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalButtonText;
     }
 });
+
 </script>
 {% endblock %}

@@ -21,14 +21,41 @@
                 </a>
             </div>
 
-            <div id="resumes-list" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <!-- Resumes will be loaded here via HTMX -->
-                <div class="text-center py-8" hx-get="/api/resumes" hx-trigger="load" hx-swap="innerHTML">
-                    <div class="animate-pulse">
-                        <div class="h-4 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
-                        <div class="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {% if resumes %}
+                    {% for resume in resumes %}
+                    <div class="bg-white overflow-hidden shadow rounded-lg">
+                        <div class="px-4 py-5 sm:p-6">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900">
+                                {{ resume.title }}
+                            </h3>
+                            <p class="mt-1 text-sm text-gray-500">
+                                Last updated: {{ resume.updated_at.strftime('%Y-%m-%d %H:%M') if resume.updated_at else 'Never' }}
+                            </p>
+                            <div class="mt-4">
+                                <a href="/resumes/{{ resume.id }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                    View Details <span aria-hidden="true">&rarr;</span>
+                                </a>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-8 col-span-full">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No resumes</h3>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Get started by creating a new resume.
+                        </p>
+                        <div class="mt-6">
+                            <a href="/resumes/new" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                <i class="fas fa-plus mr-2"></i> New Resume
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>

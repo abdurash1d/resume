@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="md:grid md:grid-cols-3 md:gap-6">
+    <div class="md:col-span-1">
+        <div class="px-4 sm:px-0">
+            <h3 class="text-lg font-medium leading-6 text-gray-900">
+                {% if resume %}
+                    Edit Resume
+                {% else %}
+                    Create New Resume
+                {% endif %}
+            </h3>
+            <p class="mt-1 text-sm text-gray-600">
+                Fill in the details below to create a new resume.
+            </p>
+        </div>
+    </div>
+    <div class="mt-5 md:mt-0 md:col-span-2">
+        <form id="resumeForm" 
+              action="{% if resume %}/api/resumes/{{ resume.id }}{% else %}/api/resumes{% endif %}" 
+              method="POST">
+            <div class="shadow overflow-hidden sm:rounded-md">
+                <div class="px-4 py-5 bg-white sm:p-6">
+                    <div class="grid grid-cols-6 gap-6">
+                        <div class="col-span-6">
+                            <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
+                            <input type="text" 
+                                   name="title" 
+                                   id="title" 
+                                   required
+                                   value="{{ resume.title if resume else '' }}"
+                                   class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                        </div>
+
+                        <div class="col-span-6">
+                            <label for="content" class="block text-sm font-medium text-gray-700">Content</label>
+                            <div class="mt-1">
+                                <textarea id="content" 
+                                          name="content" 
+                                          rows="15"
+                                          required
+                                          class="shadow-sm focus:ring-blue-500 focus:border-blue-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md">{{ resume.content if resume else '' }}</textarea>
+                            </div>
+                            <p class="mt-2 text-sm text-gray-500">
+                                Write your resume content here. You can use markdown for formatting.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-4 py-3 bg-gray-50 text-right sm:px-6">
+                    <a href="{% if resume %}/resumes/{{ resume.id }}{% else %}/resumes{% endif %}" 
+                       class="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mr-3">
+                        Cancel
+                    </a>
+                    <button type="submit" 
+                            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        {% if resume %}
+                            Update Resume
+                        {% else %}
+                            Create Resume
+                        {% endif %}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('resumeForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const form = e.target;
+    const formData = new FormData(form);
+    const button = form.querySelector('button[type="submit"]');
+    const buttonText = button.innerHTML;
+    
+    try {
+        // Disable button and show loading state
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
+        
+        const method = form.getAttribute('action').includes('edit') ? 'PUT' : 'POST';
+        const url = form.getAttribute('action');
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                title: formData.get('title'),
+                content: formData.get('content')
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Redirect to the resume detail page
+            window.location.href = `/resumes/${data.id}`;
+        } else {
+            throw new Error(data.detail || 'Failed to save resume');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert(error.message || 'An error occurred while saving the resume');
+        button.disabled = false;
+        button.innerHTML = buttonText;
+    }
+});
+</script>
+{% endblock %}

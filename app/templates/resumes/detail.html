@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+        <div>
+            <h3 class="text-lg leading-6 font-medium text-gray-900">{{ resume.title }}</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">
+                Created on {{ resume.created_at.strftime('%B %d, %Y') }}
+                {% if resume.updated_at and resume.updated_at != resume.created_at %}
+                    (Updated on {{ resume.updated_at.strftime('%B %d, %Y') }})
+                {% endif %}
+            </p>
+        </div>
+        <div class="flex space-x-2">
+            <a href="/resumes/{{ resume.id }}/edit" 
+               class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <i class="fas fa-edit mr-2"></i> Edit
+            </a>
+            <button onclick="deleteResume({{ resume.id }})" 
+                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                <i class="fas fa-trash mr-2"></i> Delete
+            </button>
+        </div>
+    </div>
+    
+    <div class="border-t border-gray-200 px-4 py-5 sm:p-0">
+        <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+            <dt class="text-sm font-medium text-gray-500">Content</dt>
+            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 whitespace-pre-line">{{ resume.content }}</dd>
+        </div>
+        
+        {% if resume.improved_content %}
+        <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 bg-blue-50">
+            <dt class="text-sm font-medium text-gray-500">Improved Content</dt>
+            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 whitespace-pre-line">
+                {{ resume.improved_content }}
+            </dd>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="px-4 py-4 bg-gray-50 text-right sm:px-6">
+        <button onclick="improveResume({{ resume.id }})" 
+                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+            <i class="fas fa-magic mr-2"></i> Improve with AI
+        </button>
+    </div>
+</div>
+
+<!-- History Section -->
+{% if resume.history %}
+<div class="mt-8">
+    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Version History</h3>
+    <div class="bg-white shadow overflow-hidden sm:rounded-md">
+        <ul class="divide-y divide-gray-200">
+            {% for history in resume.history %}
+            <li class="{% if loop.first %}bg-blue-50{% endif %}">
+                <div class="px-4 py-4 sm:px-6">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm font-medium text-blue-600 truncate">
+                            Version from {{ history.created_at.strftime('%B %d, %Y %H:%M') }}
+                        </p>
+                        {% if loop.first %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            Current
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% if history.improved_content %}
+                    <div class="mt-2 text-sm text-gray-500">
+                        <p class="font-medium">Original:</p>
+                        <p class="whitespace-pre-line">{{ history.content }}</p>
+                        <p class="font-medium mt-2">Improved:</p>
+                        <p class="whitespace-pre-line">{{ history.improved_content }}</p>
+                    </div>
+                    {% else %}
+                    <div class="mt-2 text-sm text-gray-500 whitespace-pre-line">
+                        {{ history.content }}
+                    </div>
+                    {% endif %}
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+
+<script>
+async function deleteResume(resumeId) {
+    if (confirm('Are you sure you want to delete this resume? This action cannot be undone.')) {
+        try {
+            const response = await fetch(`/api/resumes/${resumeId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                window.location.href = '/resumes';
+            } else {
+                const error = await response.json();
+                alert(error.detail || 'Failed to delete resume');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred while deleting the resume');
+        }
+    }
+}
+
+async function improveResume(resumeId) {
+    try {
+        const button = event.target;
+        const originalText = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Improving...';
+        
+        const response = await fetch(`/api/resumes/${resumeId}/improve`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                content: 'Improve this resume'  // This is a stub, in a real app you might want to send the current content
+            })
+        });
+        
+        if (response.ok) {
+            // Reload the page to show the improved version
+            window.location.reload();
+        } else {
+            const error = await response.json();
+            alert(error.detail || 'Failed to improve resume');
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while improving the resume');
+        button.disabled = false;
+        button.innerHTML = originalText;
+    }
+}
+</script>
+{% endblock %}
