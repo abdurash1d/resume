@@ -1,16 +1,12 @@
-FROM python:3.9-slim
+FROM python:3.10-slim
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONPATH=/app \
-    APP_HOME=/app
+    PYTHONPATH=/app
 
-# Create app directory and set permissions
-RUN mkdir -p $APP_HOME && \
-    chmod 777 $APP_HOME
-
-WORKDIR $APP_HOME
+# Set working directory
+WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && \
@@ -18,34 +14,24 @@ RUN apt-get update && \
     gcc \
     python3-dev \
     libpq-dev \
-    curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user and switch to it
-RUN groupadd -r appuser && \
-    useradd -r -g appuser appuser && \
-    chown -R appuser:appuser $APP_HOME
-
 # Copy requirements first for better caching
-COPY --chown=appuser:appuser requirements.txt .
+COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY --chown=appuser:appuser . .
+COPY . .
 
 # Set execute permissions
-RUN chmod +x $APP_HOME/run.py && \
-    chmod -R 755 $APP_HOME
+RUN chmod +x /app/run.py
 
 # Expose the port the app runs on
 EXPOSE 8001
-
-# Switch to non-root user
-USER appuser
 
 # Command to run the application
 CMD ["python", "run.py"]

@@ -43,9 +43,11 @@ app.add_middleware(
 )
 
 # Include API routers
-from .api import auth, resume
+from .api import auth, resume, health
 from .views import resume_views
 
+# Include routers
+app.include_router(health.router, prefix="/api")
 app.include_router(auth.router)
 app.include_router(resume.router, prefix="/api")
 app.include_router(resume_views.router)
